@@ -1,22 +1,24 @@
 from fastapi import Depends, Header, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.security import decode_token
 from app.db.session import get_session
 from app.db.models.user import User
 
+security = HTTPBearer(auto_error=True)
 
 async def get_current_user(
-    authorization: str | None = Header(None, alias="Authorization"),
+    creds: HTTPAuthorizationCredentials = Depends(security),
     session: AsyncSession = Depends(get_session),
 ) -> User:
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing Bearer token")
-    token = authorization.split(" ", 1)[1]
+    token = creds.credentials  # здесь уже чистый токен (без Bearer)
     payload = decode_token(token)
     user_id = payload.get("sub")
+
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
+
     q = await session.execute(select(User).where(User.id == int(user_id)))
     user = q.scalar_one_or_none()
     if not user:

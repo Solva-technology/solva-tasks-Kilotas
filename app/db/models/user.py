@@ -1,8 +1,9 @@
 import enum
 from sqlalchemy import String, Enum, Integer
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.db.base import Base, TimestampMixin  
 from app.core.constants import TELEGRAM_ID_MAX_LEN, USERNAME_MAX_LEN, FULLNAME_MAX_LEN
+from app.db.models.groups import user_group
 
 
 class UserRole(str, enum.Enum):
@@ -20,3 +21,9 @@ class User(TimestampMixin, Base):
     username: Mapped[str | None] = mapped_column(String(USERNAME_MAX_LEN))
     full_name: Mapped[str | None] = mapped_column(String(FULLNAME_MAX_LEN))
     role: Mapped[UserRole] = mapped_column(Enum(UserRole), default=UserRole.student, nullable=False)
+    groups: Mapped[list["Group"]] = relationship(
+        "Group",
+        secondary=user_group,
+        back_populates="students",
+        lazy="selectin",
+    )

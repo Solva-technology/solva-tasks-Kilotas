@@ -3,3 +3,8 @@ FULLNAME_MAX_LEN = 128
 TELEGRAM_ID_MAX_LEN = 64
 GROUP_NAME_MAX_LEN = 128
 TASK_TITLE_MAX_LEN = 255
+
+GROUP_NOT_FOUND = "Group not found"
+STUDENT_NOT_FOUND = "Student not found"
+GROUP_EXISTS = "Group name already exists"
+STUDENT_ALREADY_IN_GROUP = "Student already in group"
