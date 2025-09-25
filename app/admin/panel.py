@@ -1,4 +1,3 @@
-# app/admin/panel.py
 from typing import Any
 from starlette.requests import Request
 
@@ -88,7 +87,7 @@ def init_admin(app) -> Admin:
                 log.error({"hook": "no_sid_after_create", "data_keys": list(data.keys())})
                 return
 
-            # ⚠️ НИКАКИХ model.student / refresh — только явный SELECT (без greenlet проблем)
+
             async with AsyncSessionLocal() as session:
                 res = await session.execute(select(User.telegram_id).where(User.id == sid))
                 chat_id = res.scalar_one_or_none()

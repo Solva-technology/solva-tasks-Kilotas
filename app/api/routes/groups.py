@@ -1,118 +1,98 @@
+import logging
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.session import get_session
+from app.db.models.groups import Group
 from app.db.models.user import User
-from app.db.models.groups import Group, user_group
-from app.schemas.groups import GroupCreate, GroupOut, GroupDetail, AddStudentIn
-from app.deps.roles import require_teacher_or_admin, require_admin_or_teacher_or_manager
-from app.core.constants import GROUP_NOT_FOUND, GROUP_EXISTS, STUDENT_ALREADY_IN_GROUP, STUDENT_NOT_FOUND
+from app.deps.roles import require_teacher_or_admin
+from app.schemas.groups import GroupCreate, GroupOut, GroupDetail
+from app.core.constants import GROUP_NOT_FOUND, STUDENT_NOT_FOUND
 
 router = APIRouter(prefix="/groups", tags=["groups"])
+log = logging.getLogger(__name__)
 
 
-@router.post("/", response_model=GroupOut)
+
+@router.post("/", response_model=GroupOut, status_code=status.HTTP_201_CREATED)
 async def create_group(
     data: GroupCreate,
-    _: User = Depends(require_teacher_or_admin),
+    actor: User = Depends(require_teacher_or_admin),
     session: AsyncSession = Depends(get_session),
 ):
-    """Create a new group"""
-    exists = await session.execute(select(Group).where(Group.name == data.name))
-    if exists.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=GROUP_EXISTS
-        )
-
     group = Group(name=data.name, manager_id=data.manager_id)
     session.add(group)
     await session.commit()
     await session.refresh(group)
-    return group
+
+    log.info({
+        "action": "group_created",
+        "user_id": actor.id,
+        "group_id": group.id,
+        "name": group.name,
+        "manager_id": group.manager_id,
+    })
+
+    return GroupOut(id=group.id, name=group.name, manager_id=group.manager_id)
 
 
 @router.get("/", response_model=list[GroupOut])
 async def list_groups(
-    _: User = Depends(require_admin_or_teacher_or_manager),
     session: AsyncSession = Depends(get_session),
 ):
-    """Get all groups"""
-    res = await session.execute(select(Group))
-    return res.scalars().all()
+    res = await session.execute(select(Group).order_by(Group.id))
+    groups = res.scalars().all()
+    return [GroupOut(id=g.id, name=g.name, manager_id=g.manager_id) for g in groups]
+
 
 @router.get("/{group_id}", response_model=GroupDetail)
 async def get_group(
     group_id: int,
-    _: User = Depends(require_admin_or_teacher_or_manager),
     session: AsyncSession = Depends(get_session),
 ):
-    """Get group details with students"""
-    res = await session.execute(select(Group).where(Group.id == group_id))
-    group = res.scalar_one_or_none()
+    group = (await session.execute(select(Group).where(Group.id == group_id))).scalar_one_or_none()
     if not group:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=GROUP_NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=GROUP_NOT_FOUND)
 
-    res2 = await session.execute(
-        select(User.id).join(user_group, user_group.c.user_id == User.id).where(user_group.c.group_id == group_id)
+    return GroupDetail(
+        id=group.id,
+        name=group.name,
+        manager_id=group.manager_id,
+        students=[s.id for s in group.students],
     )
-    students = [row[0] for row in res2.all()]
-    return GroupDetail(id=group.id, name=group.name, manager_id=group.manager_id, students=students)
 
 
 @router.post("/{group_id}/add_student", response_model=GroupDetail)
-async def add_student(
+async def add_student_to_group(
     group_id: int,
-    data: AddStudentIn,
-    _: User = Depends(require_teacher_or_admin),
+    student_id: int,
+    actor: User = Depends(require_teacher_or_admin),
     session: AsyncSession = Depends(get_session),
 ):
-    """Add student to group"""
-    gq = await session.execute(select(Group).where(Group.id == group_id))
-    group = gq.scalar_one_or_none()
+    group = (await session.execute(select(Group).where(Group.id == group_id))).scalar_one_or_none()
     if not group:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=GROUP_NOT_FOUND
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=GROUP_NOT_FOUND)
 
-
-    uq = await session.execute(select(User).where(User.id == data.student_id))
-    student = uq.scalar_one_or_none()
+    student = (await session.execute(select(User).where(User.id == student_id))).scalar_one_or_none()
     if not student:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=STUDENT_NOT_FOUND
-        )
-
-    # Check if student is already in group
-    exists = await session.execute(
-        select(user_group).where(
-            user_group.c.group_id == group_id,
-            user_group.c.user_id == data.student_id
-        )
-    )
-    if exists.first():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=STUDENT_ALREADY_IN_GROUP
-        )
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=STUDENT_NOT_FOUND)
 
 
-    await session.execute(
-        user_group.insert().values(
-            group_id=group_id,
-            user_id=data.student_id
-        )
-    )
+    group.students.append(student)
     await session.commit()
+    await session.refresh(group)
 
+    log.info({
+        "action": "student_added_to_group",
+        "actor_id": actor.id,
+        "group_id": group.id,
+        "student_id": student.id,
+    })
 
-    res2 = await session.execute(
-        select(User.id).join(user_group, user_group.c.user_id == User.id).where(user_group.c.group_id == group_id)
+    return GroupDetail(
+        id=group.id,
+        name=group.name,
+        manager_id=group.manager_id,
+        students=[s.id for s in group.students],
     )
-    students = [row[0] for row in res2.all()]
-    return GroupDetail(id=group.id, name=group.name, manager_id=group.manager_id, students=students)

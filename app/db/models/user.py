@@ -27,3 +27,8 @@ class User(TimestampMixin, Base):
         back_populates="students",
         lazy="selectin",
     )
+
+    def __str__(self):
+        if self.username:
+            return f"{self.full_name} (@{self.username})"
+        return self.full_name or f"User #{self.id}"

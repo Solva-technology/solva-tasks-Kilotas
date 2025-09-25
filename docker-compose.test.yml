@@ -1,0 +1,52 @@
+services:
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    volumes:
+      - ./logs:/app/logs
+      - ./app/logs:/app/app/logs
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://postgres:postgres@db:5432/postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+      - SECRET_KEY=KSEUtdh6od27s5hNBWyoMvpyZI7qQ07fq8eyC6HQx1eI5NY1T9v4Jcp5gc1p56Ra2nwwXKjmS85N5LSj-2py1Q
+      - ALGORITHM=HS256
+      - ACCESS_TOKEN_EXPIRE_MINUTES=60
+      - BOT_TOKEN=8078022129:AAHDt3NFMZtvUawb8CQyp14H7CWYfpjg_BA
+      - BOT_SECRET=super-strong-random-secret
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=test-redis-password
+      - REDIS_SSL=false
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass test-redis-password
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "test-redis-password", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5

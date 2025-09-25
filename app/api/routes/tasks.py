@@ -1,7 +1,6 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, and_
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_session
@@ -13,9 +12,11 @@ from app.deps.roles import require_teacher_or_admin, require_admin_or_teacher_or
 from app.deps.auth import get_current_user
 from app.schemas.tasks import TaskCreate, TaskOut, TaskDetail, TaskUpdate, TaskStatusUpdate
 from app.services.notifier import send_tg_message
+from app.core.constants import STUDENT_NOT_FOUND, GROUP_NOT_FOUND, TASK_NOT_FOUND, FORBIDDEN, NOT_YOUR_TASK
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 log = logging.getLogger(__name__)
+
 
 def to_out(t: Task) -> TaskOut:
     return TaskOut(
@@ -23,19 +24,19 @@ def to_out(t: Task) -> TaskOut:
         student_id=t.student_id, group_id=t.group_id, deadline=t.deadline
     )
 
-@router.post("/", response_model=TaskOut, status_code=201)
+
+@router.post("/", response_model=TaskOut, status_code=status.HTTP_201_CREATED)
 async def create_task(
     data: TaskCreate,
     actor: User = Depends(require_teacher_or_admin),
     session: AsyncSession = Depends(get_session),
 ):
-    # проверим наличие студента и группы
     stu = (await session.execute(select(User).where(User.id == data.student_id))).scalar_one_or_none()
     if not stu:
-        raise HTTPException(status_code=404, detail="Student not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=STUDENT_NOT_FOUND)
     grp = (await session.execute(select(Group).where(Group.id == data.group_id))).scalar_one_or_none()
     if not grp:
-        raise HTTPException(status_code=404, detail="Group not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=GROUP_NOT_FOUND)
 
     task = Task(
         title=data.title,
@@ -49,13 +50,11 @@ async def create_task(
     await session.commit()
     await session.refresh(task)
 
-    # Лог
     log.info({
         "action": "task_created", "user_id": actor.id, "task_id": task.id,
         "student_id": task.student_id, "group_id": task.group_id, "title": task.title
     })
 
-    # Уведомление студенту
     if stu.telegram_id:
         await send_tg_message(
             chat_id=stu.telegram_id,
@@ -74,7 +73,6 @@ async def list_tasks(
     status_: TaskStatus | None = Query(default=None, alias="status"),
 ):
     conds = []
-    # базовые фильтры из query
     if student_id is not None:
         conds.append(Task.student_id == student_id)
     if group_id is not None:
@@ -82,27 +80,39 @@ async def list_tasks(
     if status_ is not None:
         conds.append(Task.status == status_)
 
-    # ограничение по роли
     if actor.role == UserRole.manager:
         mgids = await manager_group_ids(session, actor)
         if not mgids:
             return []
         conds.append(Task.group_id.in_(mgids))
     elif actor.role == UserRole.student:
-        # студент видит только свои задачи
         conds.append(Task.student_id == actor.id)
-    else:
-        # admin/teacher — без доп. ограничений
-        pass
 
     stmt = select(Task)
     if conds:
-        from sqlalchemy import and_
         stmt = stmt.where(and_(*conds))
     res = await session.execute(stmt.order_by(Task.id))
     return [to_out(t) for t in res.scalars().all()]
 
-@router.get("/{task_id}", response_model=TaskDetail)
+
+@router.get("/my", response_model=list[TaskOut])
+async def my_tasks(
+    actor: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_session),
+    status_: TaskStatus | None = Query(default=None, alias="status"),
+):
+    if actor.role != UserRole.student:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=FORBIDDEN)
+
+    conds = [Task.student_id == actor.id]
+    if status_ is not None:
+        conds.append(Task.status == status_)
+
+    res = await session.execute(select(Task).where(and_(*conds)).order_by(Task.id))
+    return [to_out(t) for t in res.scalars().all()]
+
+
+@router.get("/{task_id:int}", response_model=TaskDetail)
 async def get_task(
     task_id: int,
     actor: User = Depends(get_current_user),
@@ -110,15 +120,14 @@ async def get_task(
 ):
     t = (await session.execute(select(Task).where(Task.id == task_id))).scalar_one_or_none()
     if not t:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND)
 
-    # ограничения видимости
     if actor.role == UserRole.student and t.student_id != actor.id:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=FORBIDDEN)
     if actor.role == UserRole.manager:
         mgids = await manager_group_ids(session, actor)
         if t.group_id not in mgids:
-            raise HTTPException(status_code=403, detail="Forbidden")
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=FORBIDDEN)
 
     return TaskDetail(
         **to_out(t).model_dump(),
@@ -127,7 +136,9 @@ async def get_task(
         updated_at=t.updated_at,
     )
 
-@router.patch("/{task_id}", response_model=TaskDetail)
+
+
+@router.patch("/{task_id:int}", response_model=TaskDetail)
 async def patch_task(
     task_id: int,
     data: TaskUpdate,
@@ -136,7 +147,7 @@ async def patch_task(
 ):
     t = (await session.execute(select(Task).where(Task.id == task_id))).scalar_one_or_none()
     if not t:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND)
 
     old_status = t.status
 
@@ -158,19 +169,19 @@ async def patch_task(
         updated_at=t.updated_at,
     )
 
-@router.patch("/{task_id}/status", response_model=TaskDetail)
+
+@router.patch("/{task_id:int}/status", response_model=TaskDetail)
 async def student_change_status(
     task_id: int,
     data: TaskStatusUpdate,
-    actor: User = Depends(get_current_user),  # студент сам
+    actor: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    # найдём задачу, убедимся, что она его
     t = (await session.execute(select(Task).where(Task.id == task_id))).scalar_one_or_none()
     if not t:
-        raise HTTPException(status_code=404, detail="Task not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND)
     if actor.role == UserRole.student and t.student_id != actor.id:
-        raise HTTPException(status_code=403, detail="Not your task")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=NOT_YOUR_TASK)
 
     old_status = t.status
     t.status = data.status
@@ -182,7 +193,6 @@ async def student_change_status(
         "old_status": old_status, "new_status": t.status
     })
 
-    # уведомление менеджеру группы
     grp = (await session.execute(select(Group).where(Group.id == t.group_id))).scalar_one_or_none()
     if grp and grp.manager_id:
         mgr = (await session.execute(select(User).where(User.id == grp.manager_id))).scalar_one_or_none()
@@ -199,5 +209,3 @@ async def student_change_status(
         created_at=t.created_at,
         updated_at=t.updated_at,
     )
-
-

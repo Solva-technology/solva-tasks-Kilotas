@@ -1,5 +1,5 @@
 from sqlalchemy import (
-Column, Integer, String, Enum, DateTime, ForeignKey, Table, Text, UniqueConstraint, Index
+Column, Integer, String, ForeignKey, Table, UniqueConstraint, Index
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from app.db.base import Base, TimestampMixin
@@ -39,4 +39,7 @@ class Group(TimestampMixin, Base):
         back_populates="groups",
         lazy="selectin",
     )
+
+    def __str__(self) -> str:
+        return f"Group {self.name} (#{self.id})"
 

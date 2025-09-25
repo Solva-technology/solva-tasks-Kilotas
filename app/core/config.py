@@ -18,6 +18,12 @@ class Settings(BaseSettings):
     BOT_TOKEN: str | None = None
     BOT_SECRET: str | None = None
 
+    REDIS_HOST: str = "localhost"
+    REDIS_PORT: int = 6379
+    REDIS_PASSWORD: str | None = None
+    REDIS_SSL: bool = False
+
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

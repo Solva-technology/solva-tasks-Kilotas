@@ -1,11 +1,11 @@
 import httpx
 import logging
-from app.core.config import settings
+
 
 log = logging.getLogger(__name__)
 TELEGRAM_API = "https://api.telegram.org"
 
-# app/services/notifier.py
+
 import httpx
 import logging
 from app.core.config import settings

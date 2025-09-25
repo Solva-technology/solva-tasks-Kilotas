@@ -25,6 +25,6 @@ class Task(TimestampMixin, Base):
 
     deadline: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    # связи (если хочешь)
+
     student = relationship("User", foreign_keys=[student_id])
     group = relationship("Group", foreign_keys=[group_id])
