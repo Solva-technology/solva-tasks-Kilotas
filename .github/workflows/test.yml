@@ -61,7 +61,7 @@ jobs:
       env:
         DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
       run: |
-        cd app && alembic upgrade head
+        alembic upgrade head
 
     - name: Run tests
       env:
