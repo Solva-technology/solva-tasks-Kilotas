@@ -8,6 +8,7 @@ from sqlalchemy import text
 from app.admin.panel import init_admin
 from app.core.logging import setup_logging
 from app.core.config import settings
+from app.db.init_defaults import init_defaults
 from app.db.session import engine, AsyncSessionLocal
 from app.db.base import Base
 from app.api.routes import auth as auth_router
@@ -22,10 +23,6 @@ setup_logging()
 log = logging.getLogger(__name__)
 
 
-async def init_defaults():
-    async with AsyncSessionLocal() as session:
-        async with session.begin():
-            await session.execute(text("SELECT 1"))
 
 
 @asynccontextmanager
