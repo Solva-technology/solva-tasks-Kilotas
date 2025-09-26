@@ -25,35 +25,38 @@ log = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info({"action": "service_start"})
-    worker_task = asyncio.create_task(overdue_worker())
+    worker_task = None
+    if not settings.TESTING:
+        worker_task = asyncio.create_task(overdue_worker())
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
             await conn.execute(text("SELECT 1"))
         yield
-
     finally:
-        worker_task.cancel()
-        with contextlib.suppress(Exception):
-            await worker_task
+        if worker_task:
+            worker_task.cancel()
+            with contextlib.suppress(Exception):
+                await worker_task
         await engine.dispose()
         await close_redis()
         log.info({"action": "service_stop"})
 
 
-
-app = FastAPI(title=settings.APP_NAME,
-              lifespan=lifespan,
-              swagger_ui_parameters={"persistAuthorization": True})
+app = FastAPI(
+    title=settings.APP_NAME,
+    lifespan=lifespan,
+    swagger_ui_parameters={"persistAuthorization": True}
+)
 
 logging.getLogger(__name__).warning("BOT_TOKEN loaded in API: %s", bool(settings.BOT_TOKEN))
 
 admin = init_admin(app)
 
+
 @app.get("/")
 async def root():
     return {"service": settings.APP_NAME, "status": "ok"}
-
 
 
 app.include_router(auth_router.router)
@@ -61,8 +64,6 @@ app.include_router(users_router.router)
 app.include_router(groups_router.router)
 app.include_router(tasks_router.router)
 app.include_router(debug_router.router)
-
-
 
 
 

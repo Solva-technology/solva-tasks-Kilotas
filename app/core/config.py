@@ -22,6 +22,7 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_PASSWORD: str | None = None
     REDIS_SSL: bool = False
+    TESTING: bool = False
 
 
     model_config = SettingsConfigDict(
