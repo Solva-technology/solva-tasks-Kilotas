@@ -9,7 +9,7 @@ from app.admin.panel import init_admin
 from app.core.logging import setup_logging
 from app.core.config import settings
 from app.db.init_defaults import init_defaults
-from app.db.session import engine, AsyncSessionLocal
+from app.db.session import engine
 from app.db.base import Base
 from app.api.routes import auth as auth_router
 from app.api.routes import users as users_router
@@ -23,7 +23,6 @@ setup_logging()
 log = logging.getLogger(__name__)
 
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info({"action": "service_start"})
@@ -33,8 +32,6 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
-
-        await init_defaults()
 
         yield
     finally:
