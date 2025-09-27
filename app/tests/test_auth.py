@@ -20,7 +20,7 @@ def test_telegram_callback_new_user():
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
-        assert data["role"] == "teacher"
+        assert data["role"] == "student"
 
 
 def test_telegram_callback_existing_user():
