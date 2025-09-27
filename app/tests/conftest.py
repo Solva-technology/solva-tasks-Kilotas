@@ -1,6 +1,9 @@
 import os
 import pytest
 from fastapi.testclient import TestClient
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 # ---------- ENV до импортов приложения ----------
@@ -19,6 +22,9 @@ os.environ.setdefault("REDIS_PASSWORD", "")
 os.environ.setdefault("REDIS_SSL", "false")
 os.environ.setdefault("TESTING", "1")
 os.environ.setdefault("OVERDUE_SLEEP_SEC", "0")
+
+from app.core import config
+config.settings = config.Settings()
 
 from app.main import app
 
