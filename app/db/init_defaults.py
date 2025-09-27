@@ -1,4 +1,3 @@
-# app/db/init_defaults.py
 from sqlalchemy import select
 from app.db.session import AsyncSessionLocal
 from app.db.models.user import User, UserRole
