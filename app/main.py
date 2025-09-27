@@ -33,6 +33,9 @@ async def lifespan(app: FastAPI):
     try:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+
+        await init_defaults()
+
         yield
     finally:
         if worker_task:
@@ -42,6 +45,7 @@ async def lifespan(app: FastAPI):
         await engine.dispose()
         await close_redis()
         log.info({"action": "service_stop"})
+
 
 
 app = FastAPI(
