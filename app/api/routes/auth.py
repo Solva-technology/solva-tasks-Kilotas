@@ -49,4 +49,4 @@ async def telegram_callback(
         log.info({"action": "user_login", "user_id": user.id})
 
     token = create_access_token({"sub": str(user.id), "role": user.role})
-    return TokenOut(access_token=token, role=user.role.value if hasattr(user.role, "value") else str(user.role))
+    return TokenOut(access_token=token, role=user.role.value if hasattr(user.role, "value") else str(user.role), id=user.id)

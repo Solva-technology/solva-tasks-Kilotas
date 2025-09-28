@@ -9,3 +9,4 @@ class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
     role: str
+    id: int | None = None

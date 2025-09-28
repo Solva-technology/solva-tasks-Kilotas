@@ -13,7 +13,7 @@ def test_add_student_to_group_with_teacher():
                 "username": "teacher_test",
                 "full_name": "Teacher Test",
             },
-            headers={"X-Telegram-Bot-Api-Secret-Token": settings.BOT_SECRET},
+            headers={"X-Bot-Secret": settings.BOT_SECRET},
         )
         assert resp_teacher.status_code == 200, resp_teacher.text
         teacher_data = resp_teacher.json()
@@ -21,10 +21,9 @@ def test_add_student_to_group_with_teacher():
         teacher_id = teacher_data["id"]
 
 
-        unique_group_name = f"Test Group {uuid.uuid4().hex[:8]}"
         resp_group = client.post(
             "/groups/",
-            json={"name": unique_group_name, "manager_id": teacher_id},
+            json={"name": f"Test Group {uuid.uuid4().hex[:8]}", "manager_id": teacher_id},
             headers={"Authorization": f"Bearer {teacher_token}"},
         )
         assert resp_group.status_code == 201, resp_group.text
@@ -38,7 +37,7 @@ def test_add_student_to_group_with_teacher():
                 "username": "student_test",
                 "full_name": "Student Test",
             },
-            headers={"X-Telegram-Bot-Api-Secret-Token": settings.BOT_SECRET},
+            headers={"X-Bot-Secret": settings.BOT_SECRET},
         )
         assert resp_student.status_code == 200, resp_student.text
         student_data = resp_student.json()
@@ -47,10 +46,11 @@ def test_add_student_to_group_with_teacher():
 
         resp_add = client.post(
             f"/groups/{group_id}/add_student",
-            params={"student_id": student_id},
+            json={"student_id": student_id},
             headers={"Authorization": f"Bearer {teacher_token}"},
         )
         assert resp_add.status_code == 200, resp_add.text
         data = resp_add.json()
 
-        assert any(s["id"] == student_id for s in data["students"])
+        assert student_id in data["students"]
+
