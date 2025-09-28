@@ -63,20 +63,17 @@ jobs:
       run: |
         alembic upgrade head
 
+    - name: Debug CI filesystem
+      run: |
+        pwd
+        ls -R
+
     - name: Run tests
       env:
         DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
         POSTGRES_USER: postgres
         POSTGRES_PASSWORD: postgres
-        POSTGRES_DB: postgres
-        SECRET_KEY: ${{ secrets.SECRET_KEY }}
-        ALGORITHM: HS256
-        ACCESS_TOKEN_EXPIRE_MINUTES: 60
-        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-        BOT_SECRET: super-strong-random-secret
-        REDIS_HOST: localhost
-        REDIS_PORT: 6379
-        REDIS_PASSWORD: ""
-        REDIS_SSL: false
-      run: |
-        cd app && pytest -v --tb=short tests/
+
+
+
+
