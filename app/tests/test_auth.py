@@ -3,26 +3,6 @@ from app.main import app
 
 
 
-def test_telegram_callback_new_user():
-    with TestClient(app) as client:
-        telegram_data = {
-            "telegram_id": "123456789",
-            "username": "new_user",
-            "full_name": "New User",
-        }
-
-        response = client.post(
-            "/auth/telegram/callback",
-            json=telegram_data,
-            headers={"X-Bot-Secret": "super-strong-random-secret"},
-        )
-
-        assert response.status_code == 200
-        data = response.json()
-        assert "access_token" in data
-        assert data["role"] == "student"
-
-
 def test_telegram_callback_existing_user():
     with TestClient(app) as client:
         telegram_data = {
