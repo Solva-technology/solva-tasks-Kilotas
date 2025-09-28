@@ -28,9 +28,20 @@ async def lifespan(app: FastAPI):
     worker_task = None
     if not settings.TESTING:
         worker_task = asyncio.create_task(overdue_worker())
+
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        retries = 10
+        delay = 3
+        for i in range(retries):
+            try:
+                async with engine.begin() as conn:
+                    await conn.run_sync(Base.metadata.create_all)
+                break
+            except Exception as e:
+                log.warning(f"Database not ready, retrying {i+1}/{retries}: {e}")
+                await asyncio.sleep(delay)
+        else:
+            raise RuntimeError("Database not ready after retries")
 
         yield
     finally:
@@ -41,6 +52,7 @@ async def lifespan(app: FastAPI):
         await engine.dispose()
         await close_redis()
         log.info({"action": "service_stop"})
+
 
 
 app = FastAPI(

@@ -1,6 +1,6 @@
 import httpx
 
-BACKEND_URL = "http://127.0.0.1:8000"
+BACKEND_URL = "http://app:8000"
 
 
 async def api_post(
