@@ -34,23 +34,28 @@ async def send_tg_message(chat_id: str, text: str) -> bool:
         except Exception:
             pass
 
-        log.info({
-            "action": "telegram_send",
-            "chat_id": chat_id,
-            "status_code": resp.status_code,
-            "ok": ok,
-            "response": body[:600],
-        })
-        if not ok:
-            log.error({
-                "action": "telegram_fail",
+        log.info(
+            {
+                "action": "telegram_send",
                 "chat_id": chat_id,
                 "status_code": resp.status_code,
+                "ok": ok,
                 "response": body[:600],
-            })
+            }
+        )
+        if not ok:
+            log.error(
+                {
+                    "action": "telegram_fail",
+                    "chat_id": chat_id,
+                    "status_code": resp.status_code,
+                    "response": body[:600],
+                }
+            )
         return ok
 
     except Exception as e:
-        log.exception({"action": "telegram_exception", "chat_id": chat_id, "error": str(e)})
+        log.exception(
+            {"action": "telegram_exception", "chat_id": chat_id, "error": str(e)}
+        )
         return False
-

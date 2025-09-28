@@ -48,17 +48,23 @@ async def overdue_worker():
                         continue
 
                     async with AsyncSessionLocal() as session:
-                        stu = (await session.execute(
-                            select(User).where(User.id == t.student_id)
-                        )).scalar_one_or_none()
-                        grp = (await session.execute(
-                            select(Group).where(Group.id == t.group_id)
-                        )).scalar_one_or_none()
+                        stu = (
+                            await session.execute(
+                                select(User).where(User.id == t.student_id)
+                            )
+                        ).scalar_one_or_none()
+                        grp = (
+                            await session.execute(
+                                select(Group).where(Group.id == t.group_id)
+                            )
+                        ).scalar_one_or_none()
                         mgr = None
                         if grp and grp.manager_id:
-                            mgr = (await session.execute(
-                                select(User).where(User.id == grp.manager_id)
-                            )).scalar_one_or_none()
+                            mgr = (
+                                await session.execute(
+                                    select(User).where(User.id == grp.manager_id)
+                                )
+                            ).scalar_one_or_none()
 
                     student_text = (
                         "⏰ <b>Дедлайн прошёл</b>\n"
@@ -94,4 +100,3 @@ async def overdue_worker():
     except asyncio.CancelledError:
         log.debug("overdue_worker cancelled")
         return
-

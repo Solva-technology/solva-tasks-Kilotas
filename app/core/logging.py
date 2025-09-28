@@ -21,6 +21,7 @@ class JsonFormatter(logging.Formatter):
             payload.update(record.args)
         return json.dumps(payload, ensure_ascii=False)
 
+
 def setup_logging():
     root = logging.getLogger()
     root.setLevel(logging.INFO)

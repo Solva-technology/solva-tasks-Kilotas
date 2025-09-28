@@ -1,1 +1,1 @@
-TOKENS: dict[str,str] = {}
+TOKENS: dict[str, str] = {}

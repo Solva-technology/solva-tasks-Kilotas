@@ -7,7 +7,9 @@ load_dotenv()
 
 
 # ---------- ENV до импортов приложения ----------
-os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://postgres:postgres@127.0.0.1:5433/postgres")
+os.environ.setdefault(
+    "DATABASE_URL", "postgresql+asyncpg://postgres:postgres@127.0.0.1:5433/postgres"
+)
 os.environ.setdefault("POSTGRES_USER", "postgres")
 os.environ.setdefault("POSTGRES_PASSWORD", "postgres")
 os.environ.setdefault("POSTGRES_DB", "postgres")
@@ -24,10 +26,10 @@ os.environ.setdefault("TESTING", "1")
 os.environ.setdefault("OVERDUE_SLEEP_SEC", "0")
 
 from app.core import config
+
 config.settings = config.Settings()
 
 from app.main import app
-
 
 
 @pytest.fixture
@@ -39,6 +41,7 @@ def _patch_overdue_worker(monkeypatch):
 
     monkeypatch.setattr(ow, "overdue_worker", _noop_worker, raising=True)
 
+
 @pytest.fixture
 def client(_patch_overdue_worker, redis_mock, override_auth, tg_mock):
     client = TestClient(app)
@@ -46,6 +49,7 @@ def client(_patch_overdue_worker, redis_mock, override_auth, tg_mock):
         yield client
     finally:
         client.close()
+
 
 @pytest.fixture
 def redis_mock(monkeypatch):
@@ -107,21 +111,31 @@ def override_auth(monkeypatch):
             self.created_at = created_at or now
             self.updated_at = updated_at or now
 
-
     from app.api.routes import groups as groups_module
-    app.dependency_overrides[groups_module.require_teacher_or_admin] = lambda: DummyUser(role="teacher")
-    if hasattr(groups_module, "get_current_user"):
-        app.dependency_overrides[groups_module.get_current_user] = lambda: DummyUser(role="teacher")
-    if hasattr(groups_module, "get_current_active_user"):
-        app.dependency_overrides[groups_module.get_current_active_user] = lambda: DummyUser(role="teacher")
 
+    app.dependency_overrides[groups_module.require_teacher_or_admin] = (
+        lambda: DummyUser(role="teacher")
+    )
+    if hasattr(groups_module, "get_current_user"):
+        app.dependency_overrides[groups_module.get_current_user] = lambda: DummyUser(
+            role="teacher"
+        )
+    if hasattr(groups_module, "get_current_active_user"):
+        app.dependency_overrides[groups_module.get_current_active_user] = (
+            lambda: DummyUser(role="teacher")
+        )
 
     try:
         from app.api.routes import auth as auth_module
+
         if hasattr(auth_module, "get_current_user"):
-            app.dependency_overrides[auth_module.get_current_user] = lambda: DummyUser(role="teacher")
+            app.dependency_overrides[auth_module.get_current_user] = lambda: DummyUser(
+                role="teacher"
+            )
         if hasattr(auth_module, "get_current_active_user"):
-            app.dependency_overrides[auth_module.get_current_active_user] = lambda: DummyUser(role="teacher")
+            app.dependency_overrides[auth_module.get_current_active_user] = (
+                lambda: DummyUser(role="teacher")
+            )
     except Exception:
         pass
 
@@ -141,8 +155,6 @@ def override_auth(monkeypatch):
     app.dependency_overrides.clear()
 
 
-
-
 @pytest.fixture
 def tg_mock(monkeypatch):
     calls = []
@@ -156,9 +168,7 @@ def tg_mock(monkeypatch):
     return calls
 
 
-
 @pytest.fixture
 def client(_patch_overdue_worker, redis_mock, override_auth, tg_mock):
     with TestClient(app) as c:
         yield c
-

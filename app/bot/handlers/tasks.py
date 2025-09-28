@@ -19,7 +19,9 @@ async def my_tasks(message: Message):
     chat_id = str(message.chat.id)
     token = TOKENS.get(chat_id)
     if not token:
-        await message.answer("Сначала нажмите /start для авторизации.", reply_markup=main_keyboard)
+        await message.answer(
+            "Сначала нажмите /start для авторизации.", reply_markup=main_keyboard
+        )
         return
 
     r = await api_get("/tasks/my", token=token)
@@ -36,11 +38,17 @@ async def my_tasks(message: Message):
     for t in tasks[:20]:
         dl = t.get("deadline")
         if dl:
-            try: dl_str = datetime.fromisoformat(dl.replace("Z","+00:00")).strftime("%Y-%m-%d %H:%M")
-            except: dl_str = dl
+            try:
+                dl_str = datetime.fromisoformat(dl.replace("Z", "+00:00")).strftime(
+                    "%Y-%m-%d %H:%M"
+                )
+            except:
+                dl_str = dl
         else:
             dl_str = "—"
-        lines.append(f"<b>#{t['id']}</b> • {t['title']}\nСтатус: <code>{t['status']}</code> • Дедлайн: {dl_str}")
+        lines.append(
+            f"<b>#{t['id']}</b> • {t['title']}\nСтатус: <code>{t['status']}</code> • Дедлайн: {dl_str}"
+        )
     await message.answer("📋 <b>Мои задачи</b>\n\n" + "\n\n".join(lines))
 
 
@@ -49,7 +57,9 @@ async def task_detail(message: Message):
     chat_id = str(message.chat.id)
     token = TOKENS.get(chat_id)
     if not token:
-        await message.answer("Сначала нажмите /start для авторизации.", reply_markup=main_keyboard)
+        await message.answer(
+            "Сначала нажмите /start для авторизации.", reply_markup=main_keyboard
+        )
         return
 
     parts = message.text.strip().split()
@@ -60,14 +70,20 @@ async def task_detail(message: Message):
 
     r = await api_get(f"/tasks/{task_id}", token=token)
     if r.status_code != 200:
-        await message.answer(f"❌ Не удалось получить задачу #{task_id}: {r.status_code}\n{r.text}")
+        await message.answer(
+            f"❌ Не удалось получить задачу #{task_id}: {r.status_code}\n{r.text}"
+        )
         return
 
     t = r.json()
     dl = t.get("deadline")
     if dl:
-        try: dl_str = datetime.fromisoformat(dl.replace("Z","+00:00")).strftime("%Y-%m-%d %H:%M")
-        except: dl_str = dl
+        try:
+            dl_str = datetime.fromisoformat(dl.replace("Z", "+00:00")).strftime(
+                "%Y-%m-%d %H:%M"
+            )
+        except:
+            dl_str = dl
     else:
         dl_str = "—"
 
@@ -76,7 +92,7 @@ async def task_detail(message: Message):
         f"Статус: <code>{t['status']}</code>\n"
         f"Дедлайн: {dl_str}\n\n"
         f"{t.get('description') or ''}",
-        reply_markup=status_keyboard(task_id)
+        reply_markup=status_keyboard(task_id),
     )
 
 
@@ -95,7 +111,9 @@ async def cb_setstatus(callback: CallbackQuery):
         await callback.answer("Некорректные данные кнопки.", show_alert=True)
         return
 
-    r = await api_patch(f"/tasks/{task_id}/status", json={"status": new_status}, token=token)
+    r = await api_patch(
+        f"/tasks/{task_id}/status", json={"status": new_status}, token=token
+    )
     if r.status_code == 200:
         t = r.json()
         await callback.message.edit_text(

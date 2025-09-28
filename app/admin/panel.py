@@ -14,14 +14,19 @@ from sqlalchemy import select
 
 log = logging.getLogger(__name__)
 
+
 def init_admin(app) -> Admin:
     admin = Admin(app, engine)
 
     class UserAdmin(ModelView, model=User):
         name_plural = "Users"
         column_list = [
-            User.id, User.telegram_id, User.username,
-            User.full_name, User.role, User.created_at
+            User.id,
+            User.telegram_id,
+            User.username,
+            User.full_name,
+            User.role,
+            User.created_at,
         ]
         column_searchable_list = [User.username, User.full_name, User.telegram_id]
         column_sortable_list = [User.id, User.role, User.created_at]
@@ -35,13 +40,25 @@ def init_admin(app) -> Admin:
     class TaskAdmin(ModelView, model=Task):
         name_plural = "Tasks"
         column_list = [
-            Task.id, Task.title, Task.status, Task.student_id,
-            Task.group_id, Task.deadline, Task.created_at
+            Task.id,
+            Task.title,
+            Task.status,
+            Task.student_id,
+            Task.group_id,
+            Task.deadline,
+            Task.created_at,
         ]
         column_searchable_list = [Task.title]
         column_sortable_list = [Task.id, Task.status, Task.deadline, Task.created_at]
 
-        form_columns = [Task.title, Task.description, Task.status, Task.student, Task.group, Task.deadline]
+        form_columns = [
+            Task.title,
+            Task.description,
+            Task.status,
+            Task.student,
+            Task.group,
+            Task.deadline,
+        ]
 
         form_ajax_refs = {
             "student": {"fields": (User.username, User.full_name, User.telegram_id)},
@@ -53,11 +70,15 @@ def init_admin(app) -> Admin:
             "group": {"validators": [DataRequired(message="Select group")]},
         }
 
-        async def on_model_change(self, data: dict[str, Any], model: Task, is_created: bool, request: Request) -> None:
-            log.info(f"[BEFORE] created={is_created}, student_id={getattr(model,'student_id',None)}")
+        async def on_model_change(
+            self, data: dict[str, Any], model: Task, is_created: bool, request: Request
+        ) -> None:
+            log.info(
+                f"[BEFORE] created={is_created}, student_id={getattr(model,'student_id',None)}"
+            )
 
         async def after_model_change(
-                self, data: dict[str, Any], model: Task, is_created: bool, request: Request
+            self, data: dict[str, Any], model: Task, is_created: bool, request: Request
         ) -> None:
             sid = getattr(model, "student_id", None)
             if not is_created:
@@ -71,7 +92,7 @@ def init_admin(app) -> Admin:
                     for k in ("id", "pk", "value"):
                         if k in raw:
                             try:
-                                sid = int(raw[k]);
+                                sid = int(raw[k])
                                 break
                             except Exception:
                                 pass
@@ -84,12 +105,15 @@ def init_admin(app) -> Admin:
 
             log.info({"hook": "after", "created": is_created, "sid": sid})
             if not sid:
-                log.error({"hook": "no_sid_after_create", "data_keys": list(data.keys())})
+                log.error(
+                    {"hook": "no_sid_after_create", "data_keys": list(data.keys())}
+                )
                 return
 
-
             async with AsyncSessionLocal() as session:
-                res = await session.execute(select(User.telegram_id).where(User.id == sid))
+                res = await session.execute(
+                    select(User.telegram_id).where(User.id == sid)
+                )
                 chat_id = res.scalar_one_or_none()
 
             if not chat_id:
@@ -99,7 +123,7 @@ def init_admin(app) -> Admin:
             ok = await send_tg_message(
                 chat_id,
                 f"📌 <b>Новая задача</b>\n<b>{model.title}</b>\n"
-                f"Статус: {model.status}\nДедлайн: {getattr(model, 'deadline', '—') or '—'}"
+                f"Статус: {model.status}\nДедлайн: {getattr(model, 'deadline', '—') or '—'}",
             )
             log.info({"hook": "notify_sent", "ok": ok, "sid": sid})
 
@@ -108,6 +132,3 @@ def init_admin(app) -> Admin:
     admin.add_view(TaskAdmin)
 
     return admin
-
-
-

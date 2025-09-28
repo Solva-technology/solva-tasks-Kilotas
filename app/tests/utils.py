@@ -19,4 +19,3 @@ def create_user_via_telegram(client, telegram_id: str, username: str, full_name:
     me_data = me.json()
     data["user_id"] = me_data.get("id") or me_data.get("user_id")
     assert data["user_id"], "users/me must return id"
-

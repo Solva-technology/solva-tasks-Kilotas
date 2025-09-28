@@ -20,15 +20,16 @@ def test_add_student_to_group_with_teacher():
         teacher_token = teacher_data["access_token"]
         teacher_id = teacher_data["id"]
 
-
         resp_group = client.post(
             "/groups/",
-            json={"name": f"Test Group {uuid.uuid4().hex[:8]}", "manager_id": teacher_id},
+            json={
+                "name": f"Test Group {uuid.uuid4().hex[:8]}",
+                "manager_id": teacher_id,
+            },
             headers={"Authorization": f"Bearer {teacher_token}"},
         )
         assert resp_group.status_code == 201, resp_group.text
         group_id = resp_group.json()["id"]
-
 
         resp_student = client.post(
             "/auth/telegram/callback",
@@ -43,7 +44,6 @@ def test_add_student_to_group_with_teacher():
         student_data = resp_student.json()
         student_id = student_data["id"]
 
-
         resp_add = client.post(
             f"/groups/{group_id}/add_student",
             json={"student_id": student_id},
@@ -53,4 +53,3 @@ def test_add_student_to_group_with_teacher():
         data = resp_add.json()
 
         assert student_id in data["students"]
-

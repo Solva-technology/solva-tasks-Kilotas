@@ -8,6 +8,7 @@ from app.db.models.user import User
 
 security = HTTPBearer(auto_error=True)
 
+
 async def get_current_user(
     creds: HTTPAuthorizationCredentials = Depends(security),
     session: AsyncSession = Depends(get_session),

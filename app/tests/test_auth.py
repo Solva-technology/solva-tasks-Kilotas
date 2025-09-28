@@ -2,7 +2,6 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 
-
 def test_telegram_callback_existing_user():
     with TestClient(app) as client:
         telegram_data = {

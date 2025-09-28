@@ -4,6 +4,7 @@ from app.db.models.user import User
 
 router = APIRouter(prefix="/users", tags=["users"])
 
+
 @router.get("/me")
 async def me(user: User = Depends(get_current_user)):
     return {

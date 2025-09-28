@@ -10,9 +10,21 @@ from app.db.models.task import Task, TaskStatus
 from app.deps.groups import manager_group_ids
 from app.deps.roles import require_teacher_or_admin, require_admin_or_teacher_or_manager
 from app.deps.auth import get_current_user
-from app.schemas.tasks import TaskCreate, TaskOut, TaskDetail, TaskUpdate, TaskStatusUpdate
+from app.schemas.tasks import (
+    TaskCreate,
+    TaskOut,
+    TaskDetail,
+    TaskUpdate,
+    TaskStatusUpdate,
+)
 from app.services.notifier import send_tg_message
-from app.core.constants import STUDENT_NOT_FOUND, GROUP_NOT_FOUND, TASK_NOT_FOUND, FORBIDDEN, NOT_YOUR_TASK
+from app.core.constants import (
+    STUDENT_NOT_FOUND,
+    GROUP_NOT_FOUND,
+    TASK_NOT_FOUND,
+    FORBIDDEN,
+    NOT_YOUR_TASK,
+)
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 log = logging.getLogger(__name__)
@@ -20,8 +32,12 @@ log = logging.getLogger(__name__)
 
 def to_out(t: Task) -> TaskOut:
     return TaskOut(
-        id=t.id, title=t.title, status=t.status,
-        student_id=t.student_id, group_id=t.group_id, deadline=t.deadline
+        id=t.id,
+        title=t.title,
+        status=t.status,
+        student_id=t.student_id,
+        group_id=t.group_id,
+        deadline=t.deadline,
     )
 
 
@@ -31,12 +47,20 @@ async def create_task(
     actor: User = Depends(require_teacher_or_admin),
     session: AsyncSession = Depends(get_session),
 ):
-    stu = (await session.execute(select(User).where(User.id == data.student_id))).scalar_one_or_none()
+    stu = (
+        await session.execute(select(User).where(User.id == data.student_id))
+    ).scalar_one_or_none()
     if not stu:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=STUDENT_NOT_FOUND)
-    grp = (await session.execute(select(Group).where(Group.id == data.group_id))).scalar_one_or_none()
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=STUDENT_NOT_FOUND
+        )
+    grp = (
+        await session.execute(select(Group).where(Group.id == data.group_id))
+    ).scalar_one_or_none()
     if not grp:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=GROUP_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=GROUP_NOT_FOUND
+        )
 
     task = Task(
         title=data.title,
@@ -50,15 +74,21 @@ async def create_task(
     await session.commit()
     await session.refresh(task)
 
-    log.info({
-        "action": "task_created", "user_id": actor.id, "task_id": task.id,
-        "student_id": task.student_id, "group_id": task.group_id, "title": task.title
-    })
+    log.info(
+        {
+            "action": "task_created",
+            "user_id": actor.id,
+            "task_id": task.id,
+            "student_id": task.student_id,
+            "group_id": task.group_id,
+            "title": task.title,
+        }
+    )
 
     if stu.telegram_id:
         await send_tg_message(
             chat_id=stu.telegram_id,
-            text=f"📌 <b>Новая задача</b>\n<b>{task.title}</b>\nСтатус: {task.status}\nДедлайн: {task.deadline or '—'}"
+            text=f"📌 <b>Новая задача</b>\n<b>{task.title}</b>\nСтатус: {task.status}\nДедлайн: {task.deadline or '—'}",
         )
 
     return to_out(task)
@@ -118,9 +148,13 @@ async def get_task(
     actor: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    t = (await session.execute(select(Task).where(Task.id == task_id))).scalar_one_or_none()
+    t = (
+        await session.execute(select(Task).where(Task.id == task_id))
+    ).scalar_one_or_none()
     if not t:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND
+        )
 
     if actor.role == UserRole.student and t.student_id != actor.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=FORBIDDEN)
@@ -137,7 +171,6 @@ async def get_task(
     )
 
 
-
 @router.patch("/{task_id:int}", response_model=TaskDetail)
 async def patch_task(
     task_id: int,
@@ -145,9 +178,13 @@ async def patch_task(
     actor: User = Depends(require_teacher_or_admin),
     session: AsyncSession = Depends(get_session),
 ):
-    t = (await session.execute(select(Task).where(Task.id == task_id))).scalar_one_or_none()
+    t = (
+        await session.execute(select(Task).where(Task.id == task_id))
+    ).scalar_one_or_none()
     if not t:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND
+        )
 
     old_status = t.status
 
@@ -157,10 +194,15 @@ async def patch_task(
     await session.commit()
     await session.refresh(t)
 
-    log.info({
-        "action": "task_updated", "user_id": actor.id, "task_id": t.id,
-        "old_status": old_status, "new_status": t.status
-    })
+    log.info(
+        {
+            "action": "task_updated",
+            "user_id": actor.id,
+            "task_id": t.id,
+            "old_status": old_status,
+            "new_status": t.status,
+        }
+    )
 
     return TaskDetail(
         **to_out(t).model_dump(),
@@ -177,9 +219,13 @@ async def student_change_status(
     actor: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    t = (await session.execute(select(Task).where(Task.id == task_id))).scalar_one_or_none()
+    t = (
+        await session.execute(select(Task).where(Task.id == task_id))
+    ).scalar_one_or_none()
     if not t:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=TASK_NOT_FOUND
+        )
     if actor.role == UserRole.student and t.student_id != actor.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=NOT_YOUR_TASK)
 
@@ -188,19 +234,28 @@ async def student_change_status(
     await session.commit()
     await session.refresh(t)
 
-    log.info({
-        "action": "task_status_changed", "user_id": actor.id, "task_id": t.id,
-        "old_status": old_status, "new_status": t.status
-    })
+    log.info(
+        {
+            "action": "task_status_changed",
+            "user_id": actor.id,
+            "task_id": t.id,
+            "old_status": old_status,
+            "new_status": t.status,
+        }
+    )
 
-    grp = (await session.execute(select(Group).where(Group.id == t.group_id))).scalar_one_or_none()
+    grp = (
+        await session.execute(select(Group).where(Group.id == t.group_id))
+    ).scalar_one_or_none()
     if grp and grp.manager_id:
-        mgr = (await session.execute(select(User).where(User.id == grp.manager_id))).scalar_one_or_none()
+        mgr = (
+            await session.execute(select(User).where(User.id == grp.manager_id))
+        ).scalar_one_or_none()
         if mgr and mgr.telegram_id:
             await send_tg_message(
                 chat_id=mgr.telegram_id,
                 text=f"🔔 Статус задачи у студента {actor.full_name or actor.username or actor.id} изменён: "
-                     f"<b>{t.title}</b>\n{old_status} → <b>{t.status}</b>"
+                f"<b>{t.title}</b>\n{old_status} → <b>{t.status}</b>",
             )
 
     return TaskDetail(

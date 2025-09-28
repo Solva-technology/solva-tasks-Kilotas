@@ -43,14 +43,15 @@ async def lifespan(app: FastAPI):
         log.info({"action": "service_stop"})
 
 
-
 app = FastAPI(
     title=settings.APP_NAME,
     lifespan=lifespan,
-    swagger_ui_parameters={"persistAuthorization": True}
+    swagger_ui_parameters={"persistAuthorization": True},
 )
 
-logging.getLogger(__name__).warning("BOT_TOKEN loaded in API: %s", bool(settings.BOT_TOKEN))
+logging.getLogger(__name__).warning(
+    "BOT_TOKEN loaded in API: %s", bool(settings.BOT_TOKEN)
+)
 
 admin = init_admin(app)
 
@@ -65,7 +66,3 @@ app.include_router(users_router.router)
 app.include_router(groups_router.router)
 app.include_router(tasks_router.router)
 app.include_router(debug_router.router)
-
-
-
-

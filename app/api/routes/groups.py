@@ -14,7 +14,6 @@ router = APIRouter(prefix="/groups", tags=["groups"])
 log = logging.getLogger(__name__)
 
 
-
 @router.post("/", response_model=GroupOut, status_code=status.HTTP_201_CREATED)
 async def create_group(
     data: GroupCreate,
@@ -26,13 +25,15 @@ async def create_group(
     await session.commit()
     await session.refresh(group)
 
-    log.info({
-        "action": "group_created",
-        "user_id": actor.id,
-        "group_id": group.id,
-        "name": group.name,
-        "manager_id": group.manager_id,
-    })
+    log.info(
+        {
+            "action": "group_created",
+            "user_id": actor.id,
+            "group_id": group.id,
+            "name": group.name,
+            "manager_id": group.manager_id,
+        }
+    )
 
     return GroupOut(id=group.id, name=group.name, manager_id=group.manager_id)
 
@@ -51,9 +52,13 @@ async def get_group(
     group_id: int,
     session: AsyncSession = Depends(get_session),
 ):
-    group = (await session.execute(select(Group).where(Group.id == group_id))).scalar_one_or_none()
+    group = (
+        await session.execute(select(Group).where(Group.id == group_id))
+    ).scalar_one_or_none()
     if not group:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=GROUP_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=GROUP_NOT_FOUND
+        )
 
     return GroupDetail(
         id=group.id,
@@ -70,25 +75,34 @@ async def add_student_to_group(
     actor: User = Depends(require_teacher_or_admin),
     session: AsyncSession = Depends(get_session),
 ):
-    group = (await session.execute(select(Group).where(Group.id == group_id))).scalar_one_or_none()
+    group = (
+        await session.execute(select(Group).where(Group.id == group_id))
+    ).scalar_one_or_none()
     if not group:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=GROUP_NOT_FOUND)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=GROUP_NOT_FOUND
+        )
 
-    student = (await session.execute(select(User).where(User.id == student_id))).scalar_one_or_none()
+    student = (
+        await session.execute(select(User).where(User.id == student_id))
+    ).scalar_one_or_none()
     if not student:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=STUDENT_NOT_FOUND)
-
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail=STUDENT_NOT_FOUND
+        )
 
     group.students.append(student)
     await session.commit()
     await session.refresh(group)
 
-    log.info({
-        "action": "student_added_to_group",
-        "actor_id": actor.id,
-        "group_id": group.id,
-        "student_id": student.id,
-    })
+    log.info(
+        {
+            "action": "student_added_to_group",
+            "actor_id": actor.id,
+            "group_id": group.id,
+            "student_id": student.id,
+        }
+    )
 
     return GroupDetail(
         id=group.id,

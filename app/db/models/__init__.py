@@ -6,4 +6,3 @@ from .user import User
 
 __all__ = ["Base", "User", "Task", "Group"]
 metadata = Base.metadata
-

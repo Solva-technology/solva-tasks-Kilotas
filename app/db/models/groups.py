@@ -1,9 +1,14 @@
 from sqlalchemy import (
-Column, Integer, String, ForeignKey, Table, UniqueConstraint, Index
+    Column,
+    Integer,
+    String,
+    ForeignKey,
+    Table,
+    UniqueConstraint,
+    Index,
 )
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from app.db.base import Base, TimestampMixin
-
 
 
 user_group = Table(
@@ -16,12 +21,12 @@ user_group = Table(
     Index("ix_user_group_group_id", "group_id"),
 )
 
+
 class Group(TimestampMixin, Base):
     __tablename__ = "groups"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(128), unique=True, nullable=False)
-
 
     manager_id: Mapped[int | None] = mapped_column(
         ForeignKey("users.id", ondelete="SET NULL"), nullable=True
@@ -42,4 +47,3 @@ class Group(TimestampMixin, Base):
 
     def __str__(self) -> str:
         return f"Group {self.name} (#{self.id})"
-

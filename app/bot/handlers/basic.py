@@ -24,12 +24,20 @@ async def on_start(message: Message):
         data = r.json()
         token = data.get("access_token") or data.get("token")
         if not token:
-            await message.answer("Авторизация прошла, но сервер не вернул токен.", reply_markup=main_keyboard)
+            await message.answer(
+                "Авторизация прошла, но сервер не вернул токен.",
+                reply_markup=main_keyboard,
+            )
             return
         TOKENS[telegram_id] = token
-        await message.answer("Вы успешно авторизованы ✅\n\nИспользуйте кнопки ниже:", reply_markup=main_keyboard)
+        await message.answer(
+            "Вы успешно авторизованы ✅\n\nИспользуйте кнопки ниже:",
+            reply_markup=main_keyboard,
+        )
     else:
-        await message.answer(f"Ошибка авторизации: {r.status_code}\n{r.text}", reply_markup=main_keyboard)
+        await message.answer(
+            f"Ошибка авторизации: {r.status_code}\n{r.text}", reply_markup=main_keyboard
+        )
 
 
 @router.message(F.text.func(lambda s: s and "статус" in s.lower()))
@@ -53,5 +61,3 @@ async def help_button(message: Message):
         "• /my — мои задачи\n"
         "• /task &lt;id&gt; — детали + кнопки статуса"
     )
-
-

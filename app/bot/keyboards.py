@@ -1,4 +1,9 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    ReplyKeyboardMarkup,
+    KeyboardButton,
+    InlineKeyboardMarkup,
+    InlineKeyboardButton,
+)
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
 VALID_STATUSES = [
@@ -11,9 +16,9 @@ VALID_STATUSES = [
 main_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📋 Мои задачи"), KeyboardButton(text="📊 Статусы")],
-        [KeyboardButton(text="❓ Помощь")]
+        [KeyboardButton(text="❓ Помощь")],
     ],
-    resize_keyboard=True
+    resize_keyboard=True,
 )
 
 
@@ -22,10 +27,8 @@ def status_keyboard(task_id: int) -> InlineKeyboardMarkup:
     for label, value in VALID_STATUSES:
         kb.add(
             InlineKeyboardButton(
-                text=label.title(),
-                callback_data=f"setstatus:{task_id}:{label}"
+                text=label.title(), callback_data=f"setstatus:{task_id}:{label}"
             )
         )
     kb.adjust(2)
     return kb.as_markup()
-

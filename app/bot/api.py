@@ -3,7 +3,13 @@ import httpx
 BACKEND_URL = "http://127.0.0.1:8000"
 
 
-async def api_post(path: str, *, json: dict | None = None, token: str | None = None, headers: dict | None = None):
+async def api_post(
+    path: str,
+    *,
+    json: dict | None = None,
+    token: str | None = None,
+    headers: dict | None = None,
+):
     async with httpx.AsyncClient(timeout=10) as client:
         hdrs = {"Content-Type": "application/json", **(headers or {})}
         if token:
@@ -13,7 +19,11 @@ async def api_post(path: str, *, json: dict | None = None, token: str | None = N
 
 async def api_get(path: str, *, token: str, params: dict | None = None):
     async with httpx.AsyncClient(timeout=10) as client:
-        return await client.get(f"{BACKEND_URL}{path}", params=params, headers={"Authorization": f"Bearer {token}"})
+        return await client.get(
+            f"{BACKEND_URL}{path}",
+            params=params,
+            headers={"Authorization": f"Bearer {token}"},
+        )
 
 
 async def api_patch(path: str, *, json: dict | None = None, token: str | None = None):
